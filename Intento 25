@@ -1,0 +1,143 @@
+#include <stdio.h>
+
+#define MAX_COLUMNAS 3100
+#define FILAS_A_PROCESAR 51
+#define BUFFER_SIZE 1024*1024 
+
+
+char *my_strtok(char *str, const char *delim) {
+    static char *next_token = NULL;
+    if (str != NULL) {
+        next_token = str;
+    }
+    if (next_token == NULL) {
+        return NULL;
+    }
+    char *start = next_token;
+    char *end = start;
+    while (*end != '\0' && *end != *delim) {
+        end++;
+    }
+    if (*end == '\0') {
+        next_token = NULL;
+    } else {
+        *end = '\0';
+        next_token = end + 1;
+    }
+    return start;
+}
+
+
+int my_atoi(const char *str) {
+    int res = 0;
+    for (int i = 0; str[i] != '\0'; ++i) {
+        res = res * 10 + str[i] - '0';
+    }
+    return res;
+}
+
+
+int my_strcmp(const char *s1, const char *s2) {
+    while (*s1 && (*s1 == *s2)) {
+        s1++;
+        s2++;
+    }
+    return *(const unsigned char *)s1 - *(const unsigned char *)s2;
+}
+
+
+char *my_strcpy(char *destination, const char *source) {
+    char *start = destination;
+    while (*source != '\0') {
+        *destination = *source;
+        destination++;
+        source++;
+    }
+    *destination = '\0';
+    return start;
+}
+
+int main() 
+{
+    const char *nombre_archivo_csv = "emails.csv";
+    FILE *archivo_csv = fopen(nombre_archivo_csv, "r");
+    
+    if (!archivo_csv) 
+    {
+        printf("Error al abrir el archivo");
+        return 1;
+    }
+
+    char buffer[BUFFER_SIZE];
+    int palabras[MAX_COLUMNAS] = {0};
+    char nombres_palabras[MAX_COLUMNAS][100]; 
+
+    int inicio = 101; 
+    int columna_email_no = -1;
+
+    if (fgets(buffer, sizeof(buffer), archivo_csv) != NULL) {
+        char *token = my_strtok(buffer, ",");
+        int indice_columna = 0;
+        
+        while (token && indice_columna < MAX_COLUMNAS) {
+            if (my_strcmp(token, "Email No.") == 0) {
+                columna_email_no = indice_columna;
+            } else {
+                my_strcpy(nombres_palabras[indice_columna], token);
+            }
+            token = my_strtok(NULL, ",");
+            indice_columna++;
+        }
+    } 
+    else {
+        fclose(archivo_csv);
+        return 1;
+    }
+
+    int i;
+    for (i = 0; i < inicio; ++i) {
+        if (fgets(buffer, sizeof(buffer), archivo_csv) == NULL) {
+            fclose(archivo_csv);
+            return 1;
+        }
+    }
+
+    for (i = 0; i < FILAS_A_PROCESAR; ++i) {
+        if (fgets(buffer, sizeof(buffer), archivo_csv) == NULL) {
+            break;  
+        }
+        
+        char *token = my_strtok(buffer, ",");
+        int indice_columna = 0;
+        
+        while (token && indice_columna < MAX_COLUMNAS) {
+            if (indice_columna != columna_email_no) {
+                long val = my_atoi(token);
+                if (val != 0 || (val == 0 && token[0] == '0')) { 
+                    palabras[indice_columna] += val;
+                }
+            }
+            token = my_strtok(NULL, ",");
+            indice_columna++;
+        }
+    }
+
+    fclose(archivo_csv);
+
+    FILE *archivo_salida = fopen("182101.txt", "w");
+    if (!archivo_salida) {
+        printf("Error al abrir el archivo");
+        return 1;
+    }
+
+    for (i = 0; i < MAX_COLUMNAS; i++) {
+        if (i != columna_email_no) {
+            fprintf(archivo_salida, "%s, %d\n", nombres_palabras[i], palabras[i]);
+        }
+    }
+
+    fclose(archivo_salida);
+    printf("Guardado como: 182101.txt\n");
+
+    return 0;
+}
